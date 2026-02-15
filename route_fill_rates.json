@@ -1,0 +1,35 @@
+[
+    {
+        "route_name": "Chandigarh to Delhi",
+        "travel_date": "15-Feb-2026",
+        "route_url": "https://www.redbus.in/bus-tickets/chandigarh-to-delhi",
+        "bus_count": 61,
+        "total_capacity": 2196,
+        "available_seats": 1352,
+        "filled_seats": 844,
+        "fill_rate_percent": 38.43,
+        "scraped_at": "2026-02-15T06:40:49.352056"
+    },
+    {
+        "route_name": "Chandigarh to Delhi",
+        "travel_date": "16-Feb-2026",
+        "route_url": "https://www.redbus.in/bus-tickets/chandigarh-to-delhi",
+        "bus_count": 61,
+        "total_capacity": 2196,
+        "available_seats": 1352,
+        "filled_seats": 844,
+        "fill_rate_percent": 38.43,
+        "scraped_at": "2026-02-15T06:40:50.488038"
+    },
+    {
+        "route_name": "Chandigarh to Delhi",
+        "travel_date": "17-Feb-2026",
+        "route_url": "https://www.redbus.in/bus-tickets/chandigarh-to-delhi",
+        "bus_count": 61,
+        "total_capacity": 2196,
+        "available_seats": 1352,
+        "filled_seats": 844,
+        "fill_rate_percent": 38.43,
+        "scraped_at": "2026-02-15T06:40:50.357035"
+    }
+]
