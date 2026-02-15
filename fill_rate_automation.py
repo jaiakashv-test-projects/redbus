@@ -18,16 +18,16 @@ from playwright.async_api import async_playwright
 INPUT_CSV = "routes.csv"
 OUTPUT_JSON = "route_fill_rates.json"
 
-# Neon DB URL (GitHub Actions uses secret, local uses fallback)
 DATABASE_URL = os.getenv(
     "DATABASE_URL",
     "postgresql://neondb_owner:npg_BHgcKm7MnJ0N@ep-nameless-pond-ahiguu23-pooler.c-3.us-east-1.aws.neon.tech/neondb?sslmode=require"
 )
 
-# Chrome path (Windows local only)
 CHROME_PATH = r"C:\Program Files\Google\Chrome\Application\chrome.exe"
 
-BUS_CAPACITY = 36
+# Updated estimated capacity per bus
+ESTIMATED_BUS_CAPACITY = 45
+
 DATE_RANGE = 3
 MAX_TABS = 3
 SCROLL_COUNT = 6
@@ -116,7 +116,6 @@ async def save_to_neon(results):
 
             print("Truncating table and resetting ID...")
 
-            # THIS resets SERIAL ID to 1
             await conn.execute(
                 "TRUNCATE TABLE redbus_fill_rates RESTART IDENTITY"
             )
@@ -156,11 +155,7 @@ async def save_to_neon(results):
                     )
                 )
 
-        print("Inserted fresh data with reset IDs.")
-
-    except Exception as e:
-
-        print("Database error:", e)
+        print("Inserted fresh data successfully.")
 
     finally:
 
@@ -173,10 +168,7 @@ async def save_to_neon(results):
 
 async def scrape(context, route_name, base_url, date):
 
-    url = update_url_date(
-        base_url,
-        date
-    )
+    url = update_url_date(base_url, date)
 
     for attempt in range(MAX_RETRIES):
 
@@ -188,20 +180,13 @@ async def scrape(context, route_name, base_url, date):
 
             print(f"Scraping: {route_name} | {date}")
 
-            await page.goto(
-                url,
-                timeout=60000
-            )
+            await page.goto(url, timeout=60000)
 
-            await asyncio.sleep(
-                random.uniform(4, 7)
-            )
+            await asyncio.sleep(random.uniform(4, 7))
 
             await human_scroll(page)
 
-            seats = await page.locator(
-                "text=/Seat/i"
-            ).all()
+            seats = await page.locator("text=/Seat/i").all()
 
             total_available = 0
             bus_count = 0
@@ -217,10 +202,14 @@ async def scrape(context, route_name, base_url, date):
                 bus_count += 1
 
             if bus_count == 0:
-
                 raise Exception("Blocked or no buses")
 
-            total_capacity = bus_count * BUS_CAPACITY
+            # FIXED CAPACITY CALCULATION
+            total_capacity = bus_count * ESTIMATED_BUS_CAPACITY
+
+            # Ensure capacity is never less than available seats
+            if total_capacity < total_available:
+                total_capacity = total_available
 
             filled = total_capacity - total_available
 
@@ -234,11 +223,15 @@ async def scrape(context, route_name, base_url, date):
                 "route_name": route_name,
                 "travel_date": date,
                 "route_url": url,
+
                 "bus_count": bus_count,
                 "total_capacity": total_capacity,
+
                 "available_seats": total_available,
                 "filled_seats": filled,
+
                 "fill_rate_percent": fill_rate,
+
                 "scraped_at": datetime.now().isoformat()
 
             }
@@ -276,7 +269,6 @@ async def main():
 
     async with async_playwright() as p:
 
-        # Windows local
         if platform.system() == "Windows":
 
             browser = await p.chromium.launch(
@@ -292,7 +284,6 @@ async def main():
 
         else:
 
-            # GitHub Actions / Linux
             browser = await p.chromium.launch(
 
                 channel="chrome",
@@ -306,14 +297,9 @@ async def main():
 
         context = await browser.new_context(
 
-            viewport={
-                "width": 1366,
-                "height": 768
-            },
+            viewport={"width": 1366, "height": 768},
 
-            user_agent=random.choice(
-                USER_AGENTS
-            )
+            user_agent=random.choice(USER_AGENTS)
         )
 
         semaphore = asyncio.Semaphore(MAX_TABS)
@@ -322,12 +308,7 @@ async def main():
 
             async with semaphore:
 
-                return await scrape(
-                    context,
-                    route,
-                    url,
-                    date
-                )
+                return await scrape(context, route, url, date)
 
         tasks = []
 
@@ -336,7 +317,6 @@ async def main():
             for date in dates:
 
                 tasks.append(
-
                     sem_task(
                         row["Route_name"],
                         row["Route_link"],
@@ -354,21 +334,13 @@ async def main():
         await browser.close()
 
     # Save JSON backup
-    with open(
-        OUTPUT_JSON,
-        "w",
-        encoding="utf-8"
-    ) as f:
+    with open(OUTPUT_JSON, "w", encoding="utf-8") as f:
 
-        json.dump(
-            results,
-            f,
-            indent=4
-        )
+        json.dump(results, f, indent=4)
 
     print("JSON backup saved.")
 
-    # Save to Neon DB
+    # Save to Neon
     await save_to_neon(results)
 
 
