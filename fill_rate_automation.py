@@ -18,13 +18,13 @@ from playwright.async_api import async_playwright
 INPUT_CSV = "routes.csv"
 OUTPUT_JSON = "route_fill_rates.json"
 
-# Use environment variable for GitHub Actions or fallback locally
+# Neon DB URL (GitHub Actions uses secret, local uses fallback)
 DATABASE_URL = os.getenv(
     "DATABASE_URL",
     "postgresql://neondb_owner:npg_BHgcKm7MnJ0N@ep-nameless-pond-ahiguu23-pooler.c-3.us-east-1.aws.neon.tech/neondb?sslmode=require"
 )
 
-# Chrome path (used locally only)
+# Chrome path (Windows local only)
 CHROME_PATH = r"C:\Program Files\Google\Chrome\Application\chrome.exe"
 
 BUS_CAPACITY = 36
@@ -103,7 +103,7 @@ async def human_scroll(page):
 
 
 # =====================
-# DATABASE FUNCTION
+# DATABASE SAVE FUNCTION
 # =====================
 
 async def save_to_neon(results):
@@ -114,13 +114,12 @@ async def save_to_neon(results):
 
         async with conn.transaction():
 
-            print("Deleting existing data from Neon...")
+            print("Truncating table and resetting ID...")
 
+            # THIS resets SERIAL ID to 1
             await conn.execute(
-                "DELETE FROM redbus_fill_rates"
+                "TRUNCATE TABLE redbus_fill_rates RESTART IDENTITY"
             )
-
-            print("Old data deleted.")
 
             insert_query = """
             INSERT INTO redbus_fill_rates (
@@ -157,7 +156,7 @@ async def save_to_neon(results):
                     )
                 )
 
-        print("New data inserted successfully.")
+        print("Inserted fresh data with reset IDs.")
 
     except Exception as e:
 
@@ -219,7 +218,7 @@ async def scrape(context, route_name, base_url, date):
 
             if bus_count == 0:
 
-                raise Exception("Blocked")
+                raise Exception("Blocked or no buses")
 
             total_capacity = bus_count * BUS_CAPACITY
 
@@ -277,7 +276,7 @@ async def main():
 
     async with async_playwright() as p:
 
-        # Detect environment (GitHub Actions vs Local)
+        # Windows local
         if platform.system() == "Windows":
 
             browser = await p.chromium.launch(
@@ -369,7 +368,7 @@ async def main():
 
     print("JSON backup saved.")
 
-    # Save to Neon
+    # Save to Neon DB
     await save_to_neon(results)
 
 
