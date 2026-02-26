@@ -1,5 +1,3 @@
 Route_name,Route_link
-Chandigarh to Delhi,https://www.redbus.in/bus-tickets/chandigarh-to-delhi
-Chennai to Bangalore,https://www.redbus.in/bus-tickets/chennai-to-bangalore
-Chennai to Madurai,https://www.redbus.in/bus-tickets/chennai-to-madurai
-Hyderabad to Vijayawada,https://www.redbus.in/bus-tickets/hyderabad-to-vijayawada
+Chennai to Bangalore,https://www.redbus.in/bus-tickets/chennai-to-bangalore?fromCityId=123&fromCityName=Chennai&toCityId=122&toCityName=Bangalore
+Salem to Chennai,https://www.redbus.in/bus-tickets/chennai-to-salem?fromCityName=Chennai&fromCityId=123&srcCountry=IND&fromCityType=CITY&toCityName=Salem&toCityId=602&destCountry=undefined&toCityType=CITY

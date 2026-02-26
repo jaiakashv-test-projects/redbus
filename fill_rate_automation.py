@@ -1,353 +1,138 @@
-import pandas as pd
-import re
-import json
-import random
 import asyncio
-import asyncpg
-import os
-import platform
-
-from datetime import datetime, timedelta
+import pandas as pd
+import datetime
+import re
+import psycopg2
+from psycopg2.extras import execute_batch
 from playwright.async_api import async_playwright
 
+# Database Configuration
+DB_CONN_STRING = "postgresql://neondb_owner:npg_BHgcKm7MnJ0N@ep-nameless-pond-ahiguu23-pooler.c-3.us-east-1.aws.neon.tech/neondb?sslmode=require"
+TABLE_NAME = "redbus_fill_rates"
 
-# =====================
-# CONFIG
-# =====================
-
-INPUT_CSV = "routes.csv"
-OUTPUT_JSON = "route_fill_rates.json"
-
-DATABASE_URL = os.getenv(
-    "DATABASE_URL",
-    "postgresql://neondb_owner:npg_BHgcKm7MnJ0N@ep-nameless-pond-ahiguu23-pooler.c-3.us-east-1.aws.neon.tech/neondb?sslmode=require"
-)
-
-CHROME_PATH = r"C:\Program Files\Google\Chrome\Application\chrome.exe"
-
-# Updated estimated capacity per bus
-ESTIMATED_BUS_CAPACITY = 45
-
-DATE_RANGE = 3
-MAX_TABS = 3
-SCROLL_COUNT = 6
-MAX_RETRIES = 3
-
-
-USER_AGENTS = [
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120 Safari/537.36",
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/119 Safari/537.36",
-]
-
-
-# =====================
-# HELPERS
-# =====================
-
-def extract_available_seats(text):
-
-    if not text:
-        return 0
-
-    match = re.search(r"\d+", text)
-
-    return int(match.group()) if match else 0
-
-
-def generate_dates(days):
-
-    base = datetime.now()
-
-    return [
-        (base + timedelta(days=i)).strftime("%d-%b-%Y")
-        for i in range(days)
-    ]
-
-
-def update_url_date(url, date):
-
-    url = re.sub(
-        r"onward=\d{2}-[A-Za-z]{3}-\d{4}",
-        f"onward={date}",
-        url
-    )
-
-    url = re.sub(
-        r"doj=\d{2}-[A-Za-z]{3}-\d{4}",
-        f"doj={date}",
-        url
-    )
-
-    return url
-
-
-async def apply_stealth(page):
-
-    await page.add_init_script(
-        "Object.defineProperty(navigator, 'webdriver', {get: () => undefined})"
-    )
-
-
-async def human_scroll(page):
-
-    for _ in range(SCROLL_COUNT):
-
-        await page.mouse.wheel(
-            0,
-            random.randint(2000, 5000)
-        )
-
-        await asyncio.sleep(
-            random.uniform(1, 2)
-        )
-
-
-# =====================
-# DATABASE SAVE FUNCTION
-# =====================
-
-async def save_to_neon(results):
-
-    conn = await asyncpg.connect(DATABASE_URL)
+def upload_to_neon(data_list):
+    """Deletes old data and uploads new scraped data to Neon Postgres."""
+    if not data_list:
+        print("No data to upload.")
+        return
 
     try:
+        conn = psycopg2.connect(DB_CONN_STRING)
+        cur = conn.cursor()
 
-        async with conn.transaction():
+        # 1. Delete old data
+        print(f"Clearing old data from {TABLE_NAME}...")
+        cur.execute(f"TRUNCATE TABLE {TABLE_NAME};")
 
-            print("Truncating table and resetting ID...")
+        # 2. Prepare Insert Query
+        insert_query = f"""
+            INSERT INTO {TABLE_NAME} (
+                route_name, travel_date, route_url, bus_count, 
+                total_capacity, available_seats, filled_seats, 
+                fill_rate_percent, scraped_at, average_price
+            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        """
 
-            await conn.execute(
-                "TRUNCATE TABLE redbus_fill_rates RESTART IDENTITY"
-            )
+        # 3. Format data for insertion
+        vals = [
+            (
+                d['routename'], d['travel_date'], d['route_url'], d['bus_count'],
+                d['total_capacity'], d['available_seats'], d['filled_seats'],
+                d['fill_rate_percentage'], d['scraped_at'], d['average_price']
+            ) for d in data_list
+        ]
 
-            insert_query = """
-            INSERT INTO redbus_fill_rates (
-                route_name,
-                travel_date,
-                route_url,
-                bus_count,
-                total_capacity,
-                available_seats,
-                filled_seats,
-                fill_rate_percent,
-                scraped_at
-            )
-            VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
-            """
+        # 4. Execute batch upload
+        print(f"Uploading {len(vals)} rows to Neon...")
+        execute_batch(cur, insert_query, vals)
+        
+        conn.commit()
+        print("Database upload successful!")
 
-            for r in results:
-
-                await conn.execute(
-                    insert_query,
-                    r["route_name"],
-                    datetime.strptime(
-                        r["travel_date"],
-                        "%d-%b-%Y"
-                    ),
-                    r["route_url"],
-                    r["bus_count"],
-                    r["total_capacity"],
-                    r["available_seats"],
-                    r["filled_seats"],
-                    r["fill_rate_percent"],
-                    datetime.fromisoformat(
-                        r["scraped_at"]
-                    )
-                )
-
-        print("Inserted fresh data successfully.")
-
+    except Exception as e:
+        print(f"Database Error: {e}")
     finally:
+        if conn:
+            cur.close()
+            conn.close()
 
-        await conn.close()
+async def smooth_infinite_scroll(page, label):
+    await page.wait_for_selector("ul[data-autoid='exact']", timeout=30000)
+    for i in range(1, 81):
+        await page.evaluate("window.scrollBy(0, 600)")
+        await asyncio.sleep(1)
+        if i % 20 == 0:
+            print(f"[{label}] Scrolling step {i}...")
 
+async def scrape_url(context, route_name, base_url, target_date, label):
+    page = await context.new_page()
+    date_str = target_date.strftime("%d-%b-%Y")
+    url = f"{base_url}&onward={date_str}&doj={date_str}"
+    
+    try:
+        await page.goto(url, wait_until="domcontentloaded", timeout=60000)
+        await smooth_infinite_scroll(page, f"{route_name}-{label}")
 
-# =====================
-# SCRAPER FUNCTION
-# =====================
+        bus_cards = await page.locator("li.tupleWrapper___d5a78a").all()
+        bus_count = len(bus_cards)
+        if bus_count == 0: return None
 
-async def scrape(context, route_name, base_url, date):
+        total_price, total_avail = 0, 0
+        for card in bus_cards:
+            try:
+                p_text = await card.locator(".finalFare___0b90fc").inner_text()
+                total_price += float(re.sub(r'[^\d.]', '', p_text))
+                s_text = await card.locator(".totalSeats___4cda5d").inner_text()
+                total_avail += int(re.search(r'\d+', s_text).group())
+            except: continue
 
-    url = update_url_date(base_url, date)
+        capacity = bus_count * 40
+        filled = max(0, capacity - total_avail)
 
-    for attempt in range(MAX_RETRIES):
-
-        page = await context.new_page()
-
-        await apply_stealth(page)
-
-        try:
-
-            print(f"Scraping: {route_name} | {date}")
-
-            await page.goto(url, timeout=60000)
-
-            await asyncio.sleep(random.uniform(4, 7))
-
-            await human_scroll(page)
-
-            seats = await page.locator("text=/Seat/i").all()
-
-            total_available = 0
-            bus_count = 0
-
-            for seat in seats:
-
-                text = await seat.inner_text()
-
-                available = extract_available_seats(text)
-
-                total_available += available
-
-                bus_count += 1
-
-            if bus_count == 0:
-                raise Exception("Blocked or no buses")
-
-            # FIXED CAPACITY CALCULATION
-            total_capacity = bus_count * ESTIMATED_BUS_CAPACITY
-
-            # Ensure capacity is never less than available seats
-            if total_capacity < total_available:
-                total_capacity = total_available
-
-            filled = total_capacity - total_available
-
-            fill_rate = round(
-                (filled / total_capacity) * 100,
-                2
-            )
-
-            result = {
-
-                "route_name": route_name,
-                "travel_date": date,
-                "route_url": url,
-
-                "bus_count": bus_count,
-                "total_capacity": total_capacity,
-
-                "available_seats": total_available,
-                "filled_seats": filled,
-
-                "fill_rate_percent": fill_rate,
-
-                "scraped_at": datetime.now().isoformat()
-
-            }
-
-            print(
-                f"Success {route_name} {date} Fill {fill_rate}%"
-            )
-
-            await page.close()
-
-            return result
-
-        except Exception as e:
-
-            print("Retry:", e)
-
-            await page.close()
-
-            await asyncio.sleep(3)
-
-    return None
-
-
-# =====================
-# MAIN FUNCTION
-# =====================
+        return {
+            "routename": route_name,
+            "travel_date": target_date.strftime("%Y-%m-%d"),
+            "route_url": url,
+            "bus_count": bus_count,
+            "total_capacity": capacity,
+            "available_seats": total_avail,
+            "filled_seats": filled,
+            "fill_rate_percentage": round((filled/capacity)*100, 2) if capacity > 0 else 0,
+            "scraped_at": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "average_price": round(total_price / bus_count, 2)
+        }
+    except Exception as e:
+        print(f"Error: {e}")
+        return None
+    finally:
+        await page.close()
 
 async def main():
-
-    routes = pd.read_csv(INPUT_CSV)
-
-    dates = generate_dates(DATE_RANGE)
-
-    results = []
+    df_routes = pd.read_csv("routes.csv")
+    all_results = []
+    
+    today = datetime.date.today()
+    tomorrow = today + datetime.timedelta(days=1)
 
     async with async_playwright() as p:
+        browser = await p.chromium.launch(headless=False)
+        context = await browser.new_context()
 
-        if platform.system() == "Windows":
-
-            browser = await p.chromium.launch(
-
-                executable_path=CHROME_PATH,
-
-                headless=False,
-
-                args=[
-                    "--disable-blink-features=AutomationControlled"
-                ]
-            )
-
-        else:
-
-            browser = await p.chromium.launch(
-
-                channel="chrome",
-
-                headless=True,
-
-                args=[
-                    "--disable-blink-features=AutomationControlled"
-                ]
-            )
-
-        context = await browser.new_context(
-
-            viewport={"width": 1366, "height": 768},
-
-            user_agent=random.choice(USER_AGENTS)
-        )
-
-        semaphore = asyncio.Semaphore(MAX_TABS)
-
-        async def sem_task(route, url, date):
-
-            async with semaphore:
-
-                return await scrape(context, route, url, date)
-
-        tasks = []
-
-        for _, row in routes.iterrows():
-
-            for date in dates:
-
-                tasks.append(
-                    sem_task(
-                        row["Route_name"],
-                        row["Route_link"],
-                        date
-                    )
-                )
-
-        responses = await asyncio.gather(*tasks)
-
-        for r in responses:
-
-            if r:
-                results.append(r)
+        for _, row in df_routes.iterrows():
+            tasks = [
+                scrape_url(context, row['Route_name'], row['Route_link'], today, "TODAY"),
+                scrape_url(context, row['Route_name'], row['Route_link'], tomorrow, "TOMORROW")
+            ]
+            route_data = await asyncio.gather(*tasks)
+            all_results.extend([r for r in route_data if r is not None])
 
         await browser.close()
 
-    # Save JSON backup
-    with open(OUTPUT_JSON, "w", encoding="utf-8") as f:
-
-        json.dump(results, f, indent=4)
-
-    print("JSON backup saved.")
-
-    # Save to Neon
-    await save_to_neon(results)
-
-
-# =====================
-# RUN SCRIPT
-# =====================
+    # Upload results to Neon DB
+    if all_results:
+        upload_to_neon(all_results)
+        # Also save local backup
+        pd.DataFrame(all_results).to_csv("last_scrape_backup.csv", index=False)
 
 if __name__ == "__main__":
-
     asyncio.run(main())

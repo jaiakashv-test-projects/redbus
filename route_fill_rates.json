@@ -1,35 +1,134 @@
 [
     {
         "route_name": "Chandigarh to Delhi",
-        "travel_date": "15-Feb-2026",
+        "travel_date": "24-Feb-2026",
         "route_url": "https://www.redbus.in/bus-tickets/chandigarh-to-delhi",
-        "bus_count": 61,
-        "total_capacity": 2196,
-        "available_seats": 1352,
-        "filled_seats": 844,
-        "fill_rate_percent": 38.43,
-        "scraped_at": "2026-02-15T06:40:49.352056"
+        "bus_count": 45,
+        "total_capacity": 2025,
+        "available_seats": 1096,
+        "filled_seats": 929,
+        "fill_rate_percent": 45.88,
+        "scraped_at": "2026-02-24T21:15:47.597524"
     },
     {
         "route_name": "Chandigarh to Delhi",
-        "travel_date": "16-Feb-2026",
+        "travel_date": "25-Feb-2026",
         "route_url": "https://www.redbus.in/bus-tickets/chandigarh-to-delhi",
-        "bus_count": 61,
-        "total_capacity": 2196,
-        "available_seats": 1352,
-        "filled_seats": 844,
-        "fill_rate_percent": 38.43,
-        "scraped_at": "2026-02-15T06:40:50.488038"
+        "bus_count": 45,
+        "total_capacity": 2025,
+        "available_seats": 1096,
+        "filled_seats": 929,
+        "fill_rate_percent": 45.88,
+        "scraped_at": "2026-02-24T21:15:49.709353"
     },
     {
         "route_name": "Chandigarh to Delhi",
-        "travel_date": "17-Feb-2026",
+        "travel_date": "26-Feb-2026",
         "route_url": "https://www.redbus.in/bus-tickets/chandigarh-to-delhi",
-        "bus_count": 61,
-        "total_capacity": 2196,
-        "available_seats": 1352,
-        "filled_seats": 844,
-        "fill_rate_percent": 38.43,
-        "scraped_at": "2026-02-15T06:40:50.357035"
+        "bus_count": 45,
+        "total_capacity": 2025,
+        "available_seats": 1096,
+        "filled_seats": 929,
+        "fill_rate_percent": 45.88,
+        "scraped_at": "2026-02-24T21:15:48.986371"
+    },
+    {
+        "route_name": "Chennai to Bangalore",
+        "travel_date": "24-Feb-2026",
+        "route_url": "https://www.redbus.in/bus-tickets/chennai-to-bangalore",
+        "bus_count": 39,
+        "total_capacity": 1755,
+        "available_seats": 907,
+        "filled_seats": 848,
+        "fill_rate_percent": 48.32,
+        "scraped_at": "2026-02-24T21:16:03.730130"
+    },
+    {
+        "route_name": "Chennai to Bangalore",
+        "travel_date": "25-Feb-2026",
+        "route_url": "https://www.redbus.in/bus-tickets/chennai-to-bangalore",
+        "bus_count": 50,
+        "total_capacity": 2250,
+        "available_seats": 963,
+        "filled_seats": 1287,
+        "fill_rate_percent": 57.2,
+        "scraped_at": "2026-02-24T21:16:05.607061"
+    },
+    {
+        "route_name": "Chennai to Bangalore",
+        "travel_date": "26-Feb-2026",
+        "route_url": "https://www.redbus.in/bus-tickets/chennai-to-bangalore",
+        "bus_count": 51,
+        "total_capacity": 2295,
+        "available_seats": 956,
+        "filled_seats": 1339,
+        "fill_rate_percent": 58.34,
+        "scraped_at": "2026-02-24T21:16:05.205547"
+    },
+    {
+        "route_name": "Chennai to Madurai",
+        "travel_date": "24-Feb-2026",
+        "route_url": "https://www.redbus.in/bus-tickets/chennai-to-madurai",
+        "bus_count": 36,
+        "total_capacity": 1620,
+        "available_seats": 1098,
+        "filled_seats": 522,
+        "fill_rate_percent": 32.22,
+        "scraped_at": "2026-02-24T21:16:29.307631"
+    },
+    {
+        "route_name": "Chennai to Madurai",
+        "travel_date": "25-Feb-2026",
+        "route_url": "https://www.redbus.in/bus-tickets/chennai-to-madurai",
+        "bus_count": 47,
+        "total_capacity": 2115,
+        "available_seats": 1149,
+        "filled_seats": 966,
+        "fill_rate_percent": 45.67,
+        "scraped_at": "2026-02-24T21:16:30.841629"
+    },
+    {
+        "route_name": "Chennai to Madurai",
+        "travel_date": "26-Feb-2026",
+        "route_url": "https://www.redbus.in/bus-tickets/chennai-to-madurai",
+        "bus_count": 36,
+        "total_capacity": 1620,
+        "available_seats": 1088,
+        "filled_seats": 532,
+        "fill_rate_percent": 32.84,
+        "scraped_at": "2026-02-24T21:16:28.970044"
+    },
+    {
+        "route_name": "Hyderabad to Vijayawada",
+        "travel_date": "24-Feb-2026",
+        "route_url": "https://www.redbus.in/bus-tickets/hyderabad-to-vijayawada",
+        "bus_count": 42,
+        "total_capacity": 1890,
+        "available_seats": 1460,
+        "filled_seats": 430,
+        "fill_rate_percent": 22.75,
+        "scraped_at": "2026-02-24T21:16:50.539706"
+    },
+    {
+        "route_name": "Hyderabad to Vijayawada",
+        "travel_date": "25-Feb-2026",
+        "route_url": "https://www.redbus.in/bus-tickets/hyderabad-to-vijayawada",
+        "bus_count": 42,
+        "total_capacity": 1890,
+        "available_seats": 1460,
+        "filled_seats": 430,
+        "fill_rate_percent": 22.75,
+        "scraped_at": "2026-02-24T21:16:49.674345"
+    },
+    {
+        "route_name": "Hyderabad to Vijayawada",
+        "travel_date": "26-Feb-2026",
+        "route_url": "https://www.redbus.in/bus-tickets/hyderabad-to-vijayawada",
+        "bus_count": 54,
+        "total_capacity": 2430,
+        "available_seats": 1585,
+        "filled_seats": 845,
+        "fill_rate_percent": 34.77,
+        "scraped_at": "2026-02-24T21:16:50.339535"
     }
 ]
