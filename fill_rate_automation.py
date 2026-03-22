@@ -116,7 +116,7 @@ async def main():
     tomorrow = today + datetime.timedelta(days=1)
 
     async with async_playwright() as p:
-        browser = await p.chromium.launch(headless=False)
+        browser = await p.chromium.launch(headless=True)
         context = await browser.new_context()
 
         for _, row in df_routes.iterrows():
