@@ -3,11 +3,12 @@ import pandas as pd
 import datetime
 import re
 import psycopg2
+import os
 from psycopg2.extras import execute_batch
 from playwright.async_api import async_playwright
 
 # Database Configuration
-DB_CONN_STRING = "postgresql://neondb_owner:npg_BHgcKm7MnJ0N@ep-nameless-pond-ahiguu23-pooler.c-3.us-east-1.aws.neon.tech/neondb?sslmode=require"
+DB_CONN_STRING = os.getenv("DATABASE_URL", "postgresql://neondb_owner:npg_BHgcKm7MnJ0N@ep-nameless-pond-ahiguu23-pooler.c-3.us-east-1.aws.neon.tech/neondb?sslmode=require")
 TABLE_NAME = "redbus_fill_rates"
 
 def upload_to_neon(data_list):
